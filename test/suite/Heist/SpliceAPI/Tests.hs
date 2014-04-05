@@ -1,5 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
-
 module Heist.SpliceAPI.Tests
   ( tests
   ) where
@@ -23,7 +21,7 @@ import           Heist.SpliceAPI
 
 tests :: [Test]
 tests = [ testCase     "spliceapi/keyExistsError"       keyExistsErrorTest
-        --, testCase     "spliceapi/unionThrowsError"     unionThrowsErrorTest
+        , testCase     "spliceapi/unionThrowsError"     unionThrowsErrorTest
         ]
 
 {- | Asserts that a specific exception is raised by a given action. -}
@@ -42,13 +40,14 @@ assertRaisesError description expectedMessage action = do
                     "\nReceived unexpected error message: " ++ msg ++
                     "\ninstead of exception             : " ++ expectedMessage
 
+-- Makes sure the splices get evaluated fully enough to cause errors to get thrown
+forceSpliceEval :: Splices String -> IO ()
+forceSpliceEval ss = if (M.lookup "asdf" $! runSplices ss) /= Just "asdf" then return () else return ()
+
 keyExistsErrorTest :: IO ()
-keyExistsErrorTest = do
-    let !asdf = runSplices mySplices
+keyExistsErrorTest =
     assertRaisesError "Adding duplicate key raises error"
-                     "Key \"asdf\" already exists in the splice map" $
-                     --seq (M.lookup "asdf" asdf) (return asdf)
-                     seq asdf (return ())
+                      "Key \"asdf\" already exists in the splice map" $ forceSpliceEval mySplices
     where
     mySplices :: Splices String
     mySplices = do
@@ -58,7 +57,7 @@ keyExistsErrorTest = do
 unionThrowsErrorTest :: IO ()
 unionThrowsErrorTest = assertRaisesError "Adding duplicate key with union raises error"
                        "Key \"asdf\" already exists in the splice map" $
-                       print $ runSplices $ splices1 <> splices2 where
+                       forceSpliceEval $ splices1 <> splices2 where
     splices1, splices2 :: Splices String
     splices1 = "asdf" #! "first"
     splices2 = "asdf" #! "second"
