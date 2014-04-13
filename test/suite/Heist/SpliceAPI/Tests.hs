@@ -30,6 +30,7 @@ tests = [ testCase     "spliceapi/keyExistsError"           keyExistsErrorTest
         , testCase     "spliceapi/monoid"                   monoidTest
         , testCase     "spliceapi/applyS"                   applySTest
         , testCase     "spliceapi/insertS"                  insertSTest
+        , testCase     "spliceapi/unionWithS"               unionWithSTest
         ]
 
 {- | Asserts that an error is raised by a given action. -}
@@ -82,7 +83,7 @@ unionThrowsErrorTest = assertRaisesError "Adding duplicate key with union raises
     splices2 = "asdf" #! "second"
 
 overwriteTest :: IO ()
-overwriteTest = H.assertEqual "Adding duplicate key with ## overwrites"
+overwriteTest = H.assertEqual "Adding duplicate key with ## overwrites old value"
                               (Just "second")
                               (M.lookup "asdf" (runSplices splices)) where
     splices :: Splices String
@@ -91,7 +92,7 @@ overwriteTest = H.assertEqual "Adding duplicate key with ## overwrites"
         "asdf" ## "second"
     
 keepExistingTest :: IO ()
-keepExistingTest = H.assertEqual "Adding duplicate key with #? overwrites"
+keepExistingTest = H.assertEqual "Adding duplicate key with #? keeps old value"
                                  (Just "first")
                                  (M.lookup "asdf" (runSplices splices)) where
     splices :: Splices String
@@ -142,9 +143,21 @@ applySTest = H.assertEqual "applyS"
         ("key" ## (++"value"))
 
 insertSTest :: IO ()
-insertSTest = H.assertEqual "applyS"
+insertSTest = H.assertEqual "insertS"
               [("bar", "barvalue"), ("foo", "foovalue")]
               (splicesToList $ insertS "bar" "barvalue" splices) where
     splices :: Splices String
     splices = do
         ("foo" ## "foovalue")
+
+unionWithSTest :: IO ()
+unionWithSTest = H.assertEqual "unionWithS"
+                [("key1","value1;value3"),("key2","value2"),("key3","value4")]
+                (splicesToList $ unionWithS (\s1 s2 -> s1 ++ ";" ++ s2) splices1 splices2) where
+                splices1, splices2 :: Splices String
+                splices1 = do
+                    "key1" #! "value1"
+                    "key2" #! "value2"
+                splices2 = do
+                    "key1" #! "value3"
+                    "key3" #! "value4"
